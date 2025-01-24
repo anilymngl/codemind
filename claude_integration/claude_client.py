@@ -2,8 +2,8 @@
 import anthropic
 import os
 import logging
-from logger import log_info, log_error, log_debug, log_warning # Import simplified logger functions
-import logging
+from logger import log_info, log_error, log_debug, log_warning  # Import simplified logger functions
+
 # Configure basic logger - adjust level as needed
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -13,12 +13,12 @@ class ClaudeSynthesizer:
         self.client = anthropic.Anthropic(api_key=claude_key)
 
     async def synthesize(self, user_query: str, gemini_reasoning_list: list, gemini_full_response: str) -> str:
-        log_info("--- ClaudeSynthesizer.synthesize() START ---")  # ADD LOG
-        log_debug(f"ClaudeSynthesizer.synthesize() - User query received: {user_query}")  # ADD LOG - Log input query
-        log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Reasoning List (count): {len(gemini_reasoning_list)}")  # ADD LOG - Log count of Gemini Reasoning List
-        if gemini_reasoning_list: # Log snippet of first thought if list is not empty
-            log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Reasoning (first thought snippet):\n{gemini_reasoning_list[0][:200]}...") # ADD LOG - print snippet of first Gemini thought
-        log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Full Response (first 200 chars) received:\n{gemini_full_response[:200]}...") # ADD LOG - print snippet of Gemini full response
+        log_info("--- ClaudeSynthesizer.synthesize() START ---")
+        log_debug(f"ClaudeSynthesizer.synthesize() - User query received: {user_query}")
+        log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Reasoning List (count): {len(gemini_reasoning_list)}")
+        if gemini_reasoning_list:
+            log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Reasoning (first thought snippet):\n{gemini_reasoning_list[0][:200]}...")
+        log_debug(f"ClaudeSynthesizer.synthesize() - Gemini Full Response (first 200 chars) received:\n{gemini_full_response[:200]}...")
 
         claude_prompt = f"""
 <system>
@@ -65,15 +65,15 @@ class ClaudeSynthesizer:
     - Documentation: Comments, docstrings.
 
 **Phase 4: Output Structure & Explanation:**
-- Structure output in `<structured_output>` XML:
-    - `<code_completion>`: KILLER code snippet.
-    - `<explanation>`: DETAILED explanation:
+- Structure output in <structured_output> XML:
+    - <code_completion>: KILLER code snippet.
+    - <explanation>: DETAILED explanation:
         - How it addresses request.
         - How it IMPLEMENTS Gemini's ASSISTANT PREFILL reasoning (LIST OF THOUGHTS) AND considers Gemini's full response.
         - Best practices used and WHY.
         - Implementation notes.
-    - `<best_practices_applied>`: Bulleted list of best practices.
-    - `<implementation_notes>`: [Generate notes here!]
+    - <best_practices_applied>: Bulleted list of best practices.
+    - <implementation_notes>: [Implementation notes here!]
     </structured_output>
 
 <request>
@@ -110,7 +110,15 @@ class ClaudeSynthesizer:
             max_tokens=2048, # Increased max_tokens to allow for detailed explanations and code
             messages=messages_list # Use dynamically created messages list with user prompt and assistant prefill thoughts
         )
-        log_info("Claude model messages.create() call completed (with ASSISTANT PREFILL - LIST OF THOUGHTS).") # ADD LOG - REMOVE PRINT
-        log_debug(f"ClaudeSynthesizer.synthesize() - Claude Response Content (first 200 chars):\n{response.content[0].text[:200]}...")  # ADD LOG - print snippet of Claude response
-        log_info("--- ClaudeSynthesizer.synthesize() END ---") # ADD LOG
-        return response.content[0].text # Assuming response.content is a list and you want the first item's text
+        log_info("Claude model messages.create() call completed (with ASSISTANT PREFILL - LIST OF THOUGHTS).")
+        
+        # Check if response.content is not empty
+        if response.content:
+            log_debug(f"ClaudeSynthesizer.synthesize() - Claude Response Content (first 200 chars):\n{response.content[0].text[:200]}...")
+            claude_response_text = response.content[0].text # Extract text if content is available
+        else:
+            log_error("ClaudeSynthesizer.synthesize() - Claude Response content is empty!") # Log error if content is empty
+            log_debug(f"ClaudeSynthesizer.synthesize() - Full Claude response object: {response}") # Log full response for debugging
+            claude_response_text = "Error: Empty response from Claude model." # Set error message
+        log_info("--- ClaudeSynthesizer.synthesize() END ---")
+        return claude_response_text # Use the new variable

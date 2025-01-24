@@ -1,5 +1,5 @@
 # gemini_integration/gemini_client.py
-import google.genai as genai
+import google.generativeai as genai
 import logging
 from logger import log_info, log_error, log_debug, log_warning
 
@@ -52,7 +52,7 @@ class GeminiReasoner:
         response = self.client.models.generate_content( # Call generate_content on client.models, passing model name as argument
             contents=[types.Part.from_text(gemini_prompt.format(user_query=user_query))], # Wrap prompt in types.Part.from_text - as per some examples
             config=config, # Pass thinking_config to the generate_content call
-            model='gemini-2.0-flash-thinking-exp' # Specify model name here - as per docs 
+            model='gemini-2.0-flash-thinking-exp' # Specify model name here - as per docs
         )
 
 

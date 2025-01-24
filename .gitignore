@@ -3,3 +3,5 @@ venv
 .env
 codemind_mvp.egg-info
 .gradio
+logs
+logs\app.log

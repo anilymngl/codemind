@@ -1,12 +1,14 @@
-# CodeMind MVP: Intelligent Code Completion Demo
+# CodeMind MVP: Intelligent Code Completion Demo - Reasoned Execution (RAT-Inspired)
 
-**Unleashing the Power of Multi-Model AI for Code Completion (Early Preview)**
+**Demonstrating Multi-Model AI for Enhanced Code Assistance - Reasoned vs. Executor Architecture**
 
-CodeMind MVP is a demonstration project exploring a novel approach to intelligent code completion. This early preview showcases a core concept: **leveraging a multi-model AI architecture to generate more insightful and context-aware code suggestions.**
+CodeMind MVP showcases a novel approach to code assistance, inspired by Retrieval Augmented Thinking (RAT). This version emphasizes a **reasoned-executor architecture**, using Google Gemini for strategic reasoning and Anthropic Claude for generating high-quality code completions based on that reasoning.
 
 **🚀 Quickstart: Experience the Demo**
 
-Want to see CodeMind MVP in action?  It's quick to run locally!
+You can run CodeMind MVP in two ways: via a Command-Line Interface (CLI) or through a basic Web API.
+
+**Option 1: Command-Line Interface (CLI)**
 
 1.  **Clone the Repository:**
 
@@ -17,54 +19,61 @@ Want to see CodeMind MVP in action?  It's quick to run locally!
 
 2.  **Set API Keys:**
 
-    *   You'll need API keys for **Gemini** and **Claude** to run the AI models.
-    *   Create a `.env` file in the root directory and add your keys like this:
+    *   Create a `.env` file in the root directory and add your API keys:
 
         ```
         GEMINI_API_KEY=YOUR_GEMINI_API_KEY_VALUE
         CLAUDE_API_KEY=YOUR_CLAUDE_API_KEY_VALUE
         ```
-        *(Replace `YOUR_GEMINI_API_KEY_VALUE` and `YOUR_CLAUDE_API_KEY_VALUE` with your actual API keys)*
 
-3.  **Run the FastAPI Backend:**
-
-    Navigate to the `backend` directory and run:
+3.  **Run the CLI:**
 
     ```bash
-    uvicorn main:app --reload
+    python rat/rat.py
     ```
 
-4.  **Open the UI:**
+4.  **Interact:**
 
-    Open your web browser and go to: `http://127.0.0.1:8000`
+    *   Type your code-related queries.
+    *   Use commands like `reasoning` (toggle reasoning visibility), `model <name>` (switch Claude models - if supported in `rat-claude.py` version), and `quit`.
 
-5.  **Try a Code Completion Query:**
+**Option 2: Web API (Basic)**
 
-    In the simple web UI, enter a Python code completion query (e.g., `def calculate_average(numbers):`) and click "Get Code Completion."
+1.  **Clone the Repository** (if not already done).
+2.  **Set API Keys** (if not already done).
+3.  **Run the FastAPI Backend:**
+
+    ```bash
+    uvicorn backend.main:app --reload
+    ```
+
+4.  **Send API Queries:**
+
+    *   Use `curl` or a REST client to send POST requests to `http://127.0.0.1:8000/query` with a JSON payload like `{"user_query": "your code query here"}`.
 
 **Key MVP Features:**
 
-*   **Multi-Model Reasoning (Gemini + Claude):**  Experience a glimpse of how CodeMind combines two AI models for enhanced code completion.
-*   **Transparent "Thoughts" (Gemini Reasoning):**  View the raw XML output showing the reasoning process behind the code suggestions (technical preview).
-*   **Basic Code Completion Output:**  Generate functional Python code completions (MVP focus).
-*   **Minimalist Web UI:**  A very basic web interface to interact with the MVP demo.
+*   **Reasoned Execution Architecture:**  Experience how Gemini provides strategic reasoning, and Claude executes based on that reasoning for more intelligent code assistance.
+*   **Transparent Reasoning:** (Toggleable in CLI) See the step-by-step reasoning process from Gemini.
+*   **High-Quality Code Completion:** Claude synthesizes code based on best practices and the provided reasoning.
+*   **CLI and Web API Demo:**  Interact with CodeMind via a user-friendly CLI or a basic Web API.
 
-**Under the Hood (For Developers):**
+**Under the Hood:**
 
-CodeMind MVP uses:
-
-*   **Backend:** FastAPI (Python)
-*   **Reasoning Model:** Google Gemini (for strategic analysis)
-*   **Code Synthesis Model:** Anthropic Claude 3.5 Sonnet (for code generation)
-
-This MVP is a **technical demonstration** and a starting point.  It's designed to showcase the core concept of multi-model reasoning for code completion.
+*   **Reasoning Model:** Google Gemini (for strategic analysis and reasoning)
+*   **Execution Model:** Anthropic Claude 3.5 Sonnet (for code synthesis and execution)
+*   **Backend (API):** FastAPI (Python)
+*   **CLI:** Python `prompt_toolkit` and `rich` for interactive interface
 
 **Next Steps & Future Vision:**
 
-CodeMind is a fun project under active development.  Future versions are planned to explore:
+This MVP is a foundational step. Future versions will explore:
 
-*   More advanced reasoning and code generation capabilities.
-*   Deeper IDE integration.
-*   Support for more programming languages.
-*   Enhanced user interface and features.
+*   More advanced workflows (debugging, refactoring, testing).
+*   Enhanced UI/UX with interactive reasoning exploration.
+*   Deeper context awareness and project integration.
+*   More sophisticated intent detection for diverse queries.
 
+
+This project implements a Retrieval Augmented Thinking (RAT) approach, inspired by the work of Skirano.
+The core RAT concept is detailed here: [https://github.com/Doriandarko/RAT-retrieval-augmented-thinking]
