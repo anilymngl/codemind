@@ -65,7 +65,7 @@ async def main():
             output_dict = await cli_app.process_query(user_input)
 
             if cli_app.show_reasoning:
-                rprint(Panel(output_dict['gemini_output_xml'], title="Gemini Reasoning", border_style="blue"))
+                rprint(Panel(output_dict['gemini_output_reasoning'], title="Gemini Reasoning", border_style="blue")) # Use new key
             # Display FULL Claude XML Output - Replacing final_output_text
             rprint(Panel(output_dict['claude_output_xml'], title="Claude XML Output (Full)", border_style="green")) # Show Claude XML Output
 

@@ -45,7 +45,8 @@ async def process_query_api(user_query: str):
 # --- GRADIO UI (Optional - Keep if you want a basic web UI, remove if focusing on CLI for now) ---
 async def process_query_gradio(user_query):  # NEW FUNCTION FOR GRADIO
     output_dict = await orchestrator.process_query(user_query)
-    return (output_dict['gemini_output_xml'],
+    return (
+            output_dict['gemini_output_reasoning'],
             output_dict['claude_output_xml'],
             output_dict['final_output_text'])
 

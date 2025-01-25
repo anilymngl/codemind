@@ -76,7 +76,7 @@ class SimpleMVPOrchestrator:
 
         log_info("--- MVP Orchestrator: Processing Query END ---") # HIGH-LEVEL LOG - End of query processing
         return { # Return dictionary
-            "gemini_output_xml": gemini_output['response'], # Keep passing full Gemini response for now (might be useful for debugging)
+            "gemini_output_reasoning": gemini_output['response'], # Keep passing full Gemini response for now (might be useful for debugging)
             "claude_output_xml": claude_output_xml,
             "final_output_text": final_output_text
         }
