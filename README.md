@@ -2,78 +2,60 @@
 
 **Demonstrating Multi-Model AI for Enhanced Code Assistance - Reasoned vs. Executor Architecture**
 
-CodeMind MVP showcases a novel approach to code assistance, inspired by Retrieval Augmented Thinking (RAT). This version emphasizes a **reasoned-executor architecture**, using Google Gemini for strategic reasoning and Anthropic Claude for generating high-quality code completions based on that reasoning.
+CodeMind MVP showcases a novel approach to code assistance, inspired by Retrieval Augmented Thinking (RAT). This version emphasizes a **reasoned-executor architecture**, using Google Gemini for strategic reasoning and Anthropic Claude for generating high-quality code completions.
 
 **🚀 Quickstart: Experience the Demo**
 
-You can run CodeMind MVP in two ways: via a Command-Line Interface (CLI) or through a basic Web API.
-
-**Option 1: Command-Line Interface (CLI)**
-
-1.  **Clone the Repository:**
-
-    ```bash
-    git clone [YOUR_REPO_URL_HERE]
-    cd codemind_mvp
-    ```
-
-2.  **Set API Keys:**
-
-    *   Create a `.env` file in the root directory and add your API keys:
-
-        ```
-        GEMINI_API_KEY=YOUR_GEMINI_API_KEY_VALUE
-        CLAUDE_API_KEY=YOUR_CLAUDE_API_KEY_VALUE
-        ```
-
-3.  **Run the CLI:**
-
-    ```bash
-    python rat/rat.py
-    ```
-
-4.  **Interact:**
-
-    *   Type your code-related queries.
-    *   Use commands like `reasoning` (toggle reasoning visibility), `model <name>` (switch Claude models - if supported in `rat-claude.py` version), and `quit`.
-
-**Option 2: Web API (Basic)**
-
-1.  **Clone the Repository** (if not already done).
-2.  **Set API Keys** (if not already done).
-3.  **Run the FastAPI Backend:**
-
-    ```bash
-    uvicorn backend.main:app --reload
-    ```
-
-4.  **Send API Queries:**
-
-    *   Use `curl` or a REST client to send POST requests to `http://127.0.0.1:8000/query` with a JSON payload like `{"user_query": "your code query here"}`.
+*   **[Option 1: Command-Line Interface (CLI)](#option-1-command-line-interface-cli)**
+*   **[Option 2: Web API (Basic)](#option-2-web-api-basic)**
 
 **Key MVP Features:**
 
-*   **Reasoned Execution Architecture:**  Experience how Gemini provides strategic reasoning, and Claude executes based on that reasoning for more intelligent code assistance.
-*   **Transparent Reasoning:** (Toggleable in CLI) See the step-by-step reasoning process from Gemini.
-*   **High-Quality Code Completion:** Claude synthesizes code based on best practices and the provided reasoning.
-*   **CLI and Web API Demo:**  Interact with CodeMind via a user-friendly CLI or a basic Web API.
+*   **Reasoned Execution Architecture:** Gemini reasoning + Claude execution.
+*   **Transparent Reasoning:** See Gemini's thought process (CLI).
+*   **High-Quality Code Completion:** Claude-synthesized code.
+*   **CLI and Web API Demo:**  User-friendly interfaces.
+
+**Documentation:**
+
+*   **[Project Requirements Document (PRD)](docs/PROJECT_REQUIREMENTS.md):**  Detailed project goals, features, architecture, and tech stack.
+*   **[Roadmap](docs/ROADMAP.md):**  Development phases, future vision, and release timeline.
+*   **[Design Decisions Log](docs/DESIGN_DECISIONS_LOG.md):**  Rationale and trade-offs for key design choices.
+*   **[System Prompts](docs/SYSTEM_PROMPTS.md):**  Details of prompts used for Gemini and Claude.
+*   **[File Structure](docs/FILE_STRUCTURE.md):**  Overview of project directories and files.
+*   **[Development Tasks](docs/DEVELOPMENT_TASKS.md):**  Detailed task breakdown for each development phase.
 
 **Under the Hood:**
 
-*   **Reasoning Model:** Google Gemini (for strategic analysis and reasoning)
-*   **Execution Model:** Anthropic Claude 3.5 Sonnet (for code synthesis and execution)
+*   **Reasoning Model:** Google Gemini
+*   **Execution Model:** Anthropic Claude 3.5 Sonnet
 *   **Backend (API):** FastAPI (Python)
-*   **CLI:** Python `prompt_toolkit` and `rich` for interactive interface
+*   **CLI:** Python `prompt_toolkit` and `rich`
+
+**Get Started:**
+
+**(Keep the Quickstart instructions for CLI and Web API as in the original `README.md`, but potentially shorten them if they are too verbose. Link to more detailed setup instructions in the PRD or a separate SETUP.md if needed.)**
+
+**Option 1: Command-Line Interface (CLI)**
+
+1.  **Clone the Repository:** `git clone [YOUR_REPO_URL_HERE]`
+2.  **Set API Keys:** Create `.env` file with `GEMINI_API_KEY` and `CLAUDE_API_KEY`.
+3.  **Run the CLI:** `python rat/rat.py`
+4.  **Interact:** Type queries, use `reasoning`, `model`, `quit` commands.
+
+**Option 2: Web API (Basic)**
+
+1.  **Clone & Set API Keys** (as above).
+2.  **Run FastAPI Backend:** `uvicorn backend.main:app --reload`
+3.  **Send API Queries:** Use `curl` or REST client to `http://127.0.0.1:8000/query`.
 
 **Next Steps & Future Vision:**
 
-This MVP is a foundational step. Future versions will explore:
+**(Keep the "Next Steps & Future Vision" section from the original `README.md` or condense it.)**
 
-*   More advanced workflows (debugging, refactoring, testing).
-*   Enhanced UI/UX with interactive reasoning exploration.
-*   Deeper context awareness and project integration.
-*   More sophisticated intent detection for diverse queries.
+This MVP is a foundational step. Future versions will explore more advanced workflows, enhanced UI/UX, deeper context awareness, and more sophisticated intent detection.
 
+**(Keep the RAT inspiration and link as in the original `README.md`)**
 
-This project implements a Retrieval Augmented Thinking (RAT) approach, inspired by the work of Skirano.
-The core RAT concept is detailed here: [https://github.com/Doriandarko/RAT-retrieval-augmented-thinking]
+---
+**End of README.md**

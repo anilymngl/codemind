@@ -1,4 +1,7 @@
 import os
+import sys # ADD sys import
+# Add project root to sys.path to allow imports from other modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) # ADD sys.path modification
 from dotenv import load_dotenv
 from rich import print as rprint
 from rich.panel import Panel
@@ -7,7 +10,8 @@ from prompt_toolkit.styles import Style
 import time
 import asyncio  # Import asyncio
 from logger import log_info, log_error, log_debug, log_warning
-from mvp_orchestrator.mvp_orchestrator import SimpleMVPOrchestrator
+# from mvp_orchestrator.mvp_orchestrator import SimpleMVPOrchestrator # REMOVE SimpleMVPOrchestrator import
+from mvp_orchestrator.enhanced_orchestrator import EnhancedOrchestrator # ADD EnhancedOrchestrator import
 
 # Load environment variables
 load_dotenv()
@@ -34,7 +38,8 @@ async def main():
         rprint("[red]Error:[/] Please set GEMINI_API_KEY and CLAUDE_API_KEY in your .env file.")
         return
 
-    orchestrator = SimpleMVPOrchestrator(gemini_key=gemini_key, claude_key=claude_key)
+    # orchestrator = SimpleMVPOrchestrator(gemini_key=gemini_key, claude_key=claude_key) # REMOVE SimpleMVPOrchestrator instantiation
+    orchestrator = EnhancedOrchestrator(gemini_key=gemini_key, claude_key=claude_key) # ADD EnhancedOrchestrator instantiation - USE EnhancedOrchestrator
     cli_app = CLICodeMind(orchestrator)
     session = PromptSession()
 
@@ -65,9 +70,16 @@ async def main():
             output_dict = await cli_app.process_query(user_input)
 
             if cli_app.show_reasoning:
-                rprint(Panel(output_dict['gemini_output_reasoning'], title="Gemini Reasoning", border_style="blue")) # Use new key
+                # rprint(Panel(output_dict['gemini_output_reasoning'], title="Gemini Reasoning", border_style="blue")) # Use old key - REMOVE
+                rprint(Panel(output_dict['reasoning'], title="Gemini Reasoning", border_style="blue")) # Use new key 'reasoning' - UPDATED
+
+            # --- ADD THESE LINES FOR DEBUGGING ---
+            rprint("[bold magenta]Debugging output_dict:[/bold magenta]")
+            rprint(output_dict)
+            # --- END DEBUG LINES ---
+
             # Display FULL Claude XML Output - Replacing final_output_text
-            rprint(Panel(output_dict['claude_output_xml'], title="Claude XML Output (Full)", border_style="green")) # Show Claude XML Output
+            rprint(Panel(output_dict['code'], title="Claude XML Output (Full)", border_style="green"))
 
         except KeyboardInterrupt:
             continue

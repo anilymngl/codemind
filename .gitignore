@@ -3,5 +3,14 @@ venv
 .env
 codemind_mvp.egg-info
 .gradio
-logs
-logs\app.log
+backend/logs/
+app.log
+docs
+backup-old-codes
+test_*.py
+.cursor/rules
+rat/logs
+*.loglogs/app.log
+.cursor/prompts/examples-draft
+*.log
+load_test_results.json

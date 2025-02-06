@@ -30,15 +30,20 @@ class SimpleMVPOrchestrator:
         log_info("   [Orchestrator] Gemini reasoning COMPLETED.") # HIGH-LEVEL LOG - End Gemini reasoning
 
         log_info("   [Orchestrator] Calling Claude for synthesis...") # HIGH-LEVEL LOG - Start Claude synthesis
-        log_debug("--- SimpleMVPOrchestrator.process_query() START (Detailed) ---")  # DETAILED LOG - Function entry
-        log_debug(f"SimpleMVPOrchestrator.process_query() - Calling ClaudeSynthesizer.synthesize()...")  # DETAILED LOG - Before Claude call
-        log_debug(f"SimpleMVPOrchestrator.process_query() - Gemini Thoughts (first thought snippet for Claude): {gemini_output.get('thoughts', [''])[0][:200]}...")  # DETAILED LOG - print snippet of Gemini thoughts for Claude
-        log_debug(f"SimpleMVPOrchestrator.process_query() - Gemini Full Response (first 200 chars for Claude): {gemini_output.get('response', '')[:200]}...")  # DETAILED LOG - print snippet of Gemini full response for Claude
+        try:
+            log_debug("--- SimpleMVPOrchestrator.process_query() START (Detailed) ---")  # DETAILED LOG - Function entry
+            log_debug(f"SimpleMVPOrchestrator.process_query() - Calling ClaudeSynthesizer.synthesize()...")  # DETAILED LOG - Before Claude call
+            log_debug(f"SimpleMVPOrchestrator.process_query() - Gemini Thoughts (first thought snippet for Claude): {gemini_output.get('thoughts', [''])[0][:200]}...")  # DETAILED LOG - print snippet of Gemini thoughts for Claude
+            log_debug(f"SimpleMVPOrchestrator.process_query() - Gemini Full Response (first 200 chars for Claude): {gemini_output.get('response', '')[:200]}...")  # DETAILED LOG - print snippet of Gemini full response for Claude
 
-        claude_output_xml = await self.synthesizer.synthesize(user_query=user_query, gemini_reasoning_list=gemini_output['thoughts'], gemini_full_response=gemini_output['response']) # Pass Gemini THOUGHTS LIST and FULL RESPONSE to Claude
-        log_debug("SimpleMVPOrchestrator.process_query() - ClaudeSynthesizer.synthesize() call completed.")  # DETAILED LOG - After Claude call
-        log_debug(f"SimpleMVPOrchestrator.process_query() - Claude Output XML (first 200 chars): {claude_output_xml[:200]}...")  # DETAILED LOG - print snippet
-        log_debug("--- SimpleMVPOrchestrator.process_query() END (Detailed) ---")  # DETAILED LOG - Function exit
+            claude_output_xml = await self.synthesizer.synthesize(user_query=user_query, structured_reasoning=gemini_output['reasoning'], gemini_thoughts=gemini_output['thoughts']) # Pass Gemini THOUGHTS LIST and FULL RESPONSE to Claude
+            log_debug("SimpleMVPOrchestrator.process_query() - ClaudeSynthesizer.synthesize() call completed.")  # DETAILED LOG - After Claude call
+            log_debug(f"SimpleMVPOrchestrator.process_query() - Claude Output XML (first 200 chars): {claude_output_xml[:200]}...")  # DETAILED LOG - print snippet
+            log_debug("--- SimpleMVPOrchestrator.process_query() END (Detailed) ---")  # DETAILED LOG - Function exit
+        except Exception as e:
+            log_error(f"SimpleMVPOrchestrator.process_query() - Claude synthesis FAILED: {e}")
+            claude_output_xml = "<error>Claude synthesis failed. Check logs for details.</error>"
+
         log_info("   [Orchestrator] Claude synthesis COMPLETED.") # HIGH-LEVEL LOG - End Claude synthesis
 
         # VERY BASIC XML PARSING - JUST GET code_completion text
