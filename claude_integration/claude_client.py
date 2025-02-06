@@ -20,8 +20,10 @@ from mvp_orchestrator.error_types import (
     RateLimitError,
     ValidationError
 )
-from .xml_validator import ClaudeXMLValidator
+from langchain.output_parsers import StructuredOutputParser
+from models.pydantic_schemas import ClaudeSynthesisResult
 import aiohttp
+from langchain_core.utils.json import parse_json_markdown  # Add this import
 
 # Configure basic logger - adjust level as needed
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
@@ -99,8 +101,52 @@ class ClaudeSynthesizer:
         except Exception as e:
             raise ClaudeAPIError("Failed to initialize Claude", details={'error': str(e)})
             
-        # Initialize XML validator
-        self.xml_validator = ClaudeXMLValidator()
+        # Initialize StructuredOutputParser
+        response_schemas = [
+            {
+                "name": "code_completion",
+                "type": "string",
+                "description": "Generated code snippet"
+            },
+            {
+                "name": "explanation",
+                "type": "string",
+                "description": "Explanation of the code"
+            },
+            {
+                "name": "sandbox_config",
+                "type": "object",
+                "description": "Sandbox configuration",
+                "properties": {
+                    "template": {"type": "string"},
+                    "timeout_ms": {"type": "integer"},
+                    "memory_mb": {"type": "integer"},
+                    "dependencies": {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "metadata",
+                "type": "array",
+                "description": "Optional metadata items",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "key": {"type": "string"},
+                        "value": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "version",
+                "type": "string",
+                "description": "Synthesis version"
+            }
+        ]
+        logger.debug(f"Response schemas defined: {[schema['name'] for schema in response_schemas]}")
+        self.output_parser = StructuredOutputParser(response_schemas=response_schemas)
         
     def _prepare_message_params(
         self,
@@ -110,58 +156,54 @@ class ClaudeSynthesizer:
     ) -> Dict[str, Any]:
         """Prepare message parameters for Claude API request"""
         # Construct the system prompt
-        system_prompt = """You are a senior software engineer tasked with implementing code based on requirements and reasoning.
-        Your responses should be clear, efficient, and well-documented. Always provide complete, runnable code that includes all necessary imports and dependencies."""
+        system_prompt = f"""You are a helpful AI code synthesis assistant. Please generate Python code based on the user request.
 
-        # Extract reasoning components
-        requirements = "\n".join(f"- {req}" for req in reasoning_data.get('technical_requirements', []))
-        strategy = "\n".join(f"- {step}" for step in reasoning_data.get('implementation_strategy', []))
-        guidance = "\n".join(f"- {guide}" for guide in reasoning_data.get('guidance_for_claude', []))
-        thoughts = "\n".join(f"- {thought}" for thought in reasoning_data.get('thoughts', []))
+REQUEST: {query}
 
-        # Build the user message
-        user_message = f"""Query: {query}
+RESPONSE FORMAT:
+You must respond with valid JSON enclosed in a markdown code block. Do not include any text outside the code block.
 
-Technical Requirements:
-{requirements}
+Example format:
+```json
+{{
+  "code_completion": "<generated code>",
+  "explanation": "<explanation of code>",
+  "sandbox_config": {{
+    "template": "python3",
+    "timeout_ms": 1000,
+    "memory_mb": 256,
+    "dependencies": ["dep1", "dep2"]
+  }},
+  "metadata": [
+    {{
+      "key": "example_key",
+      "value": "example_value"
+    }}
+  ],
+  "version": "2.0.0"
+}}
+```
 
-Implementation Strategy:
-{strategy}
+REQUIREMENTS:
+1. Response MUST be valid JSON inside a markdown code block (```json)
+2. ALL fields are required and must match the exact names shown
+3. "code_completion" must be a non-empty string containing the generated code
+4. "explanation" must be a non-empty string explaining the code
+5. "sandbox_config" is optional but must follow the structure shown if present
+6. "metadata" must be an array of objects with "key" and "value" fields
+7. Do not include any explanation or text outside the JSON block
 
-Specific Guidance:
-{guidance}
-
-Reasoning Thoughts:
-{thoughts}
-
-Please provide your response in XML format with the following structure:
-<?xml version="1.0" encoding="UTF-8"?>
-<synthesis version="2.0.0">
-    <code_completion>
-        [Your implementation here]
-    </code_completion>
-    <explanation>
-        [Brief explanation of the implementation]
-    </explanation>
-    <sandbox_config>
-        <template>python3</template>
-        <dependencies>
-            <package>any required packages</package>
-        </dependencies>
-    </sandbox_config>
-    <metadata>
-        <item key="language">python</item>
-        <item key="complexity">medium</item>
-    </metadata>
-</synthesis>"""
+REASONING DATA:
+{reasoning_data}
+"""
 
         # Add context if provided
         if context:
-            user_message += f"\n\nAdditional Context:\n{context}"
+            system_prompt += f"\n\nAdditional Context:\n{context}"
 
         return {
             "system": system_prompt,
-            "messages": [{"role": "user", "content": user_message}],
+            "messages": [{"role": "user", "content": system_prompt}],
             "model": self.config.model,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
@@ -265,11 +307,32 @@ Please provide your response in XML format with the following structure:
                 log_error("Empty response from Claude")
                 raise ClaudeAPIError("Empty response from Claude")
             
-            # Validate and process XML response
-            log_debug("Processing Claude response...")
-            result = self.xml_validator.validate_and_process(response.content[0].text)
+            # Combine all text and clean up JSON parsing
+            full_text = ''.join(chunk.text for chunk in response.content)
+            log_debug("Combined accumulated text", extra={
+                'total_size': len(full_text),
+                'starts_with_json': full_text.lstrip().startswith('{')
+            })
             
-            return result
+            if not full_text:
+                log_error("Empty regular response from Claude")
+                raise ClaudeAPIError("Empty regular response from Claude")
+            
+            # Clean and validate response
+            cleaned_text = self._clean_response_text(full_text)
+            self._validate_response(cleaned_text)
+            
+            try:
+                parsed_output = self.output_parser.parse(cleaned_text)
+                return parsed_output
+            except Exception as e:
+                raise ClaudeAPIError(
+                    f"Failed to parse JSON output from Claude: {e}",
+                    details={
+                        'raw_output': full_text,
+                        'cleaned_output': cleaned_text
+                    }
+                ) from e
             
         except Exception as e:
             log_error("Regular response handling failed", exc_info=True)
@@ -330,14 +393,14 @@ Please provide your response in XML format with the following structure:
                         })
                         
                         if delta.type == 'text_delta' and hasattr(delta, 'text'):
-                            # Skip XML declaration if present at start
+                            # Skip JSON declaration if present at start
                             text = delta.text
-                            if not current_block_text and text.lstrip().startswith('<?xml'):
-                                log_debug("Found XML declaration in text delta", extra={
+                            if not current_block_text and text.lstrip().startswith('{'):
+                                log_debug("Found JSON declaration in text delta", extra={
                                     'original_text': text[:100]
                                 })
-                                text = text[text.find('?>') + 2:].lstrip()
-                                log_debug("Removed XML declaration", extra={
+                                text = text[text.find('{') + 1:].lstrip()
+                                log_debug("Removed JSON declaration", extra={
                                     'cleaned_text': text[:100]
                                 })
                             current_block_text.append(text)
@@ -380,54 +443,182 @@ Please provide your response in XML format with the following structure:
                     })
                     raise ClaudeAPIError(f"Streaming error: {error_msg}")
             
-            # Combine all text and clean up XML declaration
+            # Combine all text and clean up JSON parsing
             full_text = '\n'.join(accumulated_text)
             log_debug("Combined accumulated text", extra={
                 'total_size': len(full_text),
-                'num_blocks': len(accumulated_text),
-                'starts_with_xml': full_text.lstrip().startswith('<?xml')
+                'num_blocks': len(accumulated_text)
             })
             
             if not full_text:
                 log_error("Empty streaming response from Claude")
                 raise ClaudeAPIError("Empty streaming response from Claude")
             
-            # Remove any XML declaration
-            if full_text.lstrip().startswith('<?xml'):
-                log_debug("Removing XML declaration from full text", extra={
-                    'original_start': full_text[:200]
-                })
-                full_text = full_text[full_text.find('?>') + 2:].lstrip()
-                log_debug("Removed XML declaration", extra={
-                    'new_start': full_text[:200]
-                })
+            # Clean and validate response
+            cleaned_text = self._clean_response_text(full_text)
+            self._validate_response(cleaned_text)
             
-            # Validate and process XML response
-            log_debug("Processing streamed response...", extra={
-                'text_length': len(full_text),
-                'first_tag': full_text.split('>', 1)[0] + '>' if '>' in full_text else 'NO_TAG'
-            })
-            
-            # Clean up any markdown code block markers
-            if full_text.startswith("```xml"):
-                full_text = full_text.replace("```xml", "", 1)
-            if full_text.endswith("```"):
-                full_text = full_text.rsplit("```", 1)[0]
-            
-            result = self.xml_validator.validate_and_process(full_text)
-            
-            log_debug("Successfully processed XML response", extra={
-                'result_keys': list(result.keys()),
-                'has_code': bool(result.get('code_completion')),
-                'has_explanation': bool(result.get('explanation'))
-            })
-            
-            return result
+            try:
+                parsed_output = self.output_parser.parse(cleaned_text)
+                return parsed_output
+            except Exception as e:
+                raise ClaudeAPIError(
+                    f"Failed to parse JSON output from Claude (streaming): {e}",
+                    details={
+                        'raw_output': full_text,
+                        'cleaned_output': cleaned_text
+                    }
+                ) from e
             
         except Exception as e:
-            log_error("Streaming response handling failed", exc_info=True, extra={
-                'error_type': type(e).__name__,
-                'error_msg': str(e),
-                'accumulated_blocks': len(accumulated_text) if 'accumulated_text' in locals() else 0
-            })
+            log_error("Streaming response handling failed", exc_info=True)
             raise ClaudeAPIError(f"Failed to handle streaming response: {str(e)}")
+
+    def _clean_response_text(self, text: str) -> str:
+        """Clean response text by handling markdown code blocks and JSON formatting"""
+        logger.debug("Cleaning response text...")
+        
+        # Ensure we have a string
+        if not isinstance(text, str):
+            logger.warning(f"Received non-string response: {type(text)}")
+            try:
+                text = str(text)
+            except Exception as e:
+                logger.error(f"Failed to convert response to string: {e}")
+                raise ClaudeAPIError(
+                    "Invalid response type from Claude",
+                    details={
+                        'received_type': str(type(text)),
+                        'received_value': repr(text)
+                    }
+                )
+        
+        # Try to extract JSON from markdown code block if present
+        try:
+            return parse_json_markdown(text)
+        except Exception as e:
+            logger.debug(f"Failed to parse markdown JSON: {e}")
+            
+        # If no markdown block or parsing failed, try to find JSON content
+        import re
+        json_pattern = r'\{[\s\S]*\}'
+        match = re.search(json_pattern, text)
+        if match:
+            return match.group(0)
+            
+        return text
+
+    def _validate_response(self, response_text: str) -> None:
+        """Validate response structure before parsing"""
+        try:
+            import json
+            
+            # Ensure we have a string
+            if not isinstance(response_text, str):
+                logger.warning(f"Received non-string response for validation: {type(response_text)}")
+                try:
+                    response_text = str(response_text)
+                except Exception as e:
+                    logger.error(f"Failed to convert response to string for validation: {e}")
+                    raise ClaudeAPIError(
+                        "Invalid response type from Claude",
+                        details={
+                            'received_type': str(type(response_text)),
+                            'received_value': repr(response_text)
+                        }
+                    )
+            
+            # Clean and prepare the response text
+            cleaned_text = self._clean_response_text(response_text)
+            logger.debug("Attempting to parse cleaned response text")
+            
+            try:
+                data = json.loads(cleaned_text)
+            except json.JSONDecodeError as e:
+                raise ClaudeAPIError(
+                    f"Invalid JSON in Claude response: {str(e)}",
+                    details={
+                        'raw_output': response_text,
+                        'cleaned_output': cleaned_text,
+                        'error_location': f"line {e.lineno}, column {e.colno}"
+                    }
+                )
+            
+            # Check for required fields
+            required_fields = ['code_completion', 'explanation']
+            missing_fields = [field for field in required_fields if field not in data]
+            
+            if missing_fields:
+                raise ClaudeAPIError(
+                    f"Missing required fields in Claude response: {', '.join(missing_fields)}",
+                    details={
+                        'raw_output': response_text,
+                        'cleaned_output': cleaned_text,
+                        'missing_fields': missing_fields,
+                        'found_fields': list(data.keys())
+                    }
+                )
+                
+            # Validate field types and content
+            if not isinstance(data['code_completion'], str) or not data['code_completion'].strip():
+                raise ClaudeAPIError(
+                    "code_completion must be a non-empty string",
+                    details={
+                        'raw_output': response_text,
+                        'cleaned_output': cleaned_text,
+                        'actual_type': type(data['code_completion']).__name__ if 'code_completion' in data else 'missing'
+                    }
+                )
+                
+            if not isinstance(data['explanation'], str) or not data['explanation'].strip():
+                raise ClaudeAPIError(
+                    "explanation must be a non-empty string",
+                    details={
+                        'raw_output': response_text,
+                        'cleaned_output': cleaned_text,
+                        'actual_type': type(data['explanation']).__name__ if 'explanation' in data else 'missing'
+                    }
+                )
+                
+            # Validate sandbox_config if present
+            if 'sandbox_config' in data:
+                if not isinstance(data['sandbox_config'], dict):
+                    raise ClaudeAPIError(
+                        "sandbox_config must be an object",
+                        details={'actual_type': type(data['sandbox_config']).__name__}
+                    )
+                # Validate sandbox_config fields
+                for field in ['template', 'timeout_ms', 'memory_mb']:
+                    if field in data['sandbox_config']:
+                        if field == 'template' and not isinstance(data['sandbox_config'][field], str):
+                            raise ClaudeAPIError(f"sandbox_config.{field} must be a string")
+                        elif field in ['timeout_ms', 'memory_mb'] and not isinstance(data['sandbox_config'][field], int):
+                            raise ClaudeAPIError(f"sandbox_config.{field} must be an integer")
+                
+            # Validate metadata if present
+            if 'metadata' in data:
+                if not isinstance(data['metadata'], list):
+                    raise ClaudeAPIError(
+                        "metadata must be a list",
+                        details={'actual_type': type(data['metadata']).__name__}
+                    )
+                for item in data['metadata']:
+                    if not isinstance(item, dict) or 'key' not in item or 'value' not in item:
+                        raise ClaudeAPIError(
+                            "metadata items must be objects with 'key' and 'value' fields",
+                            details={'invalid_item': item}
+                        )
+                        
+        except json.JSONDecodeError as e:
+            raise ClaudeAPIError(
+                f"Invalid JSON in Claude response: {str(e)}",
+                details={
+                    'raw_output': response_text,
+                    'error_location': f"line {e.lineno}, column {e.colno}"
+                }
+            )
+        except KeyError as e:
+            raise ClaudeAPIError(
+                f"Missing key in Claude response: {str(e)}",
+                details={'raw_output': response_text}
+            )

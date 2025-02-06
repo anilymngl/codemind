@@ -10,9 +10,9 @@ from typing import List
 import logging
 from datetime import datetime
 from .retry_handler import RetryHandler, RetryConfig, RetryExhaustedError
-from .error_types import (
+from mvp_orchestrator.error_types import (
     CodeMindError, OrchestrationError, ReasoningError,
-    SynthesisError, ValidationError, XMLProcessingError,
+    SynthesisError, ValidationError,
     RateLimitError, ConfigurationError, SandboxError
 )
 from .response_types import (
@@ -107,9 +107,8 @@ class SynthesisError(OrchestrationError):
     pass
 
 class UnifiedOrchestrator:
-    """
-    Unified orchestrator that combines enhanced error handling, retry logic,
-    XML processing, and rate limiting for code generation.
+    """Enhanced orchestrator that handles code generation, reasoning,
+    rate limiting, and error handling for code generation.
     """
     
     def __init__(self, config: OrchestratorConfig):

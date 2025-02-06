@@ -78,8 +78,8 @@ async def main():
             rprint(output_dict)
             # --- END DEBUG LINES ---
 
-            # Display FULL Claude XML Output - Replacing final_output_text
-            rprint(Panel(output_dict['code'], title="Claude XML Output (Full)", border_style="green"))
+            # Display FULL Code Output
+            rprint(Panel(output_dict['code'], title="Code Output", border_style="green"))
 
         except KeyboardInterrupt:
             continue

@@ -24,10 +24,6 @@ class ValidationError(CodeMindError):
     """Raised when there's an error validating input or output"""
     pass
 
-class XMLProcessingError(CodeMindError):
-    """Raised when there's an error processing XML content"""
-    pass
-
 class ConfigurationError(CodeMindError):
     """Raised when there's an error in configuration"""
     pass
