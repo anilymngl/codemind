@@ -8,9 +8,9 @@ app.log
 docs
 backup-old-codes
 test_*.py
-.cursor/rules
 rat/logs
 *.loglogs/app.log
-.cursor/prompts/examples-draft
 *.log
 load_test_results.json
+.cursor/prompts/template
+.pytest_cache
